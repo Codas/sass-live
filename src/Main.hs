@@ -8,12 +8,13 @@ import Turtle
 import Control.Monad.Managed (with)
 import Control.Concurrent (threadDelay)
 import Text.Sass
-import Data.Text (pack)
-import System.IO (hPutStr)
+import Data.Text (pack, unpack)
+import System.IO (hPutStr, hClose)
 import System.Environment (getArgs)
 import Filesystem.Path hiding (empty, toText)
 import Filesystem.Path.CurrentOS hiding (empty, toText)
 import Prelude hiding (FilePath)
+import qualified System.Process as P
 
 main :: IO ()
 main = getArgs >>= \case
@@ -31,16 +32,18 @@ watcher scssFolder cssFolder = void $ withManager $ \mgr -> do
 
 
 compileSassFile :: FilePath -> FilePath -> IO ()
-compileSassFile fp outPath =
-  do echo ("compiling file" <> fpToText fp)
-     compileFile (encodeString fp) def >>= \case
+compileSassFile scssFilePath outPath =
+  do echo ("compiling file" <> fpToText (filename scssFilePath))
+     compileFile (encodeString scssFilePath) def >>= \case
          Left err -> print err
-         Right css -> do echo $ "writing css file " <> cssFile
-                         with (mktemp scssFolder "compiled_css") $ \(fp, fh) ->
-                           do hPutStr fh css
-                              void $ proc "postcss" ["--use", "autoprefixer", fpToText fp, "-d", cssFile] empty
-  where scssFolder = directory fp
-        cssName = basename fp <.> "css"
+         Right css -> do let args = ["--use", "autoprefixer", "-o", unpack cssFile]
+                             cProc =  P.proc "postcss" args
+                         (rh, wh) <- P.createPipe
+                         P.readCreateProcess cProc css
+                         echo "Prefixing completed"
+                         echo ("compiled file " <> fpToText (filename scssFilePath) <> " to " <> cssFile)
+  where scssFolder = directory scssFilePath
+        cssName = basename scssFilePath <.> "css"
         cssFile = fpToText $ outPath </> cssName
 
 fpToText :: FilePath -> Text

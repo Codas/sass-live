@@ -23,6 +23,7 @@ executable sass-live
                      , system-filepath
                      , text
                      , managed
+                     , process
 
   ghc-options:         -threaded -O2 -rtsopts -with-rtsopts=-N -with-rtsopts=-I0
   extensions:          OverloadedStrings
