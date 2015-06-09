@@ -18,12 +18,17 @@ cabal-version:       >=1.10
 executable sass-live
   main-is:             Main.hs
   build-depends:       base >=4.8 && <5
-                     , turtle, fsnotify
-                     , hsass
+                     , turtle
+                     , fsnotify
+                     , hsass >= 0.2.0  && < 0.3
+                     , hlibsass >= 0.1.2  && < 0.2
                      , system-filepath
                      , text
                      , managed
                      , process
+                     , containers
+                     , stm
+                     , foldl
 
   ghc-options:         -threaded -O2 -rtsopts -with-rtsopts=-N -with-rtsopts=-I0
   extensions:          OverloadedStrings
