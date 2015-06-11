@@ -35,11 +35,20 @@ watcher scssFolder cssFolder = void $ withManager $ \mgr -> do
     currentDir <- pwd
     includeCache <- newTVarIO Map.empty
     let outPath = currentDir </> cssFolder
+        watch :: Event -> IO ()
+        watch (Removed fp _) =
+          do cache <- readTVarIO includeCache
+             let cache' = case encodeString $ filename fp of
+                            '_' : _ -> Map.delete fp cache
+                            _       -> Map.map (\set -> Set.delete fp set) cache
+             atomically $ writeTVar includeCache cache'
         watch e = do cache <- readTVarIO includeCache
                      let fp = eventPath e
-                         scssFiles = fromMaybe (Set.singleton fp) (Map.lookup fp cache)
-                     when (hasExtension fp "scss") $
-                          mapM_ (\file -> compileSassFile file outPath includeCache) scssFiles
+                         def = case encodeString $ filename fp of
+                                 '_' : _ -> Set.empty
+                                 _       -> Set.singleton fp
+                         scssFiles = fromMaybe def (Map.lookup fp cache)
+                     mapM_ (\file -> compileSassFile file outPath includeCache) scssFiles
     -- compile all root files and fill the include cache
     files <- fmap (filter (`hasExtension` "scss")) (fold (ls scssFolder) Fold.list)
     mapM_ (\f -> compileSassFile f outPath includeCache) files
